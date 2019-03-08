@@ -154,6 +154,10 @@
     6. Multi-Range-Read(MRR)
 
     7. Index Condition Pushdown ICP优化
+11. 哈希算法
+    1. 哈希表
+    2. 
+12. 全文检索
 
 
 
