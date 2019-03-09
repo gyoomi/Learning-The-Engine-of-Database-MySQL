@@ -156,8 +156,49 @@
     7. Index Condition Pushdown ICP优化
 11. 哈希算法
     1. 哈希表
-    2. 
+    2. Innodb引擎中的哈希算法
+    3. 自适应哈希索引
 12. 全文检索
+    1. 概述
+    2. 倒排索引
+       1. 全文索引技术通常使用倒排索引来实现。通常使用关联数组来实现。
+          - Invert File Index 表现形式 {单词， 单词所在的文档ID}
+          - Full Invert Index 表现形式 {单词， （单词所在文档ID，在文档中具体位置）}
+       2. 例子
+          ![](./asserts/007.png)
+    3. Innodb全文检索
+       1. MySQL采用的是Full Invert Index。{word列（设有索引）， ilist列}
+       2. 此外为了提高word列的速度，设置有辅助索引。Auxiliary Table(辅助表)
+       3. 针对2中的辅助表，设置有FTS Index Cache(红黑树结构)来提高缓冲效率。
+       4. 针对缓存的缺点的弥补。
+       5. stopList列表的作用
+    4. MySQL中全文检索的使用
+       1. 语法
+          ![](./asserts/008.png)
+       2. NaturalLanguage
+          ![](./asserts/009.png)
+       3. Boolean
+          ![](./asserts/010.png)
+
+          Boolean支持以下几种操作符：
+          ![](./asserts/011.png)
+
+
+       4. Query Expansion
+          MySQL数据库支持全文检索的拓展查询。Implied Knowledge（隐含知识）
+          如：Database == MySQL Oracle DB2等等。
+
+          这时使用Query Expansion来开启全文检索查询
+
+          例子：
+
+          ![](./asserts/012.png)
+
+          ![](./asserts/013.png)
+
+          弊端：
+              使用Query Expansion 会带来很多很多非相关性的查询。所以使用要谨慎使用
+
 
 
 
