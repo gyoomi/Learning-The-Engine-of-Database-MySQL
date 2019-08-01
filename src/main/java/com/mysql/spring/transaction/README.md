@@ -12,7 +12,7 @@
       
       xml形如下：
       
-      ```
+      ```xml
         <tx:advice id="txAdvice" transaction-manager="txManager"> 
         <tx:attributes>  <!--设置所有匹配的方法，然后设置传播级别和事务隔离-->
                    <tx:method name="save*" propagation="REQUIRED" /> 
@@ -38,7 +38,7 @@
       ```
       
       注解形如下：
-      ```
+      ```xml
       <tx:annotation-driven transaction-manager="transactionManager" /><!--开启注解的方式-->
       ```
       >@transaction注解可以放在方法上或者类上
