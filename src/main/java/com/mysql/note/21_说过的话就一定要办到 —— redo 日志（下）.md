@@ -1,6 +1,6 @@
-# redo 日志（下）
+# redo日志（下）
 
-标签： MySQL 是怎样运行的
+标签： MySQL是怎样运行的
 
 ---
 
@@ -17,7 +17,6 @@
     
     我们前边说过之所以使用`redo`日志主要是因为它占用的空间少，还是顺序写，在事务提交时可以不把修改过的`Buffer Pool`页面刷新到磁盘，但是为了保证持久性，必须要把修改这些页面对应的`redo`日志刷新到磁盘。
     
-    Force Log at Commit    
 
 - 后台线程不停的刷刷刷
 
@@ -119,7 +118,7 @@
 ## Log Sequeue Number
 自系统开始运行，就不断的在修改页面，也就意味着会不断的生成`redo`日志。`redo`日志的量在不断的递增，就像人的年龄一样，自打出生起就不断递增，永远不可能缩减了。设计`InnoDB`的大叔为记录已经写入的`redo`日志量，设计了一个称之为`Log Sequeue Number`的全局变量，翻译过来就是：`日志序列号`，简称`lsn`。不过不像人一出生的年龄是`0`岁，设计`InnoDB`的大叔<span style="color:red">规定</span>初始的`lsn`值为`8704`（也就是一条`redo`日志也没写入时，`lsn`的值为`8704`）。
 
-我们知道在向`log buffer`中写入`redo`日志时不是一条一条写入的，而是以一个`mtr`生成的一组`redo`日志为单位进行写入的。而且实际上是把日志内容写在了`log blcok body`处。但是在统计`lsn`的增长量时，是按照实际写入的日志量加上占用的`log block header`和`log block trailer`来计算的。我们来看一个例子：
+我们知道在向`log buffer`中写入`redo`日志时不是一条一条写入的，而是以一个`mtr`生成的一组`redo`日志为单位进行写入的。而且实际上是把日志内容写在了`log block body`处。但是在统计`lsn`的增长量时，是按照实际写入的日志量加上占用的`log block header`和`log block trailer`来计算的。我们来看一个例子：
 
 - 系统第一次启动后初始化`log buffer`时，`buf_free`（就是标记下一条`redo`日志应该写入到`log buffer`的位置的变量）就会指向第一个`block`的偏移量为12字节（`log block header`的大小）的地方，那么`lsn`值也会跟着增加12：
 
@@ -194,17 +193,17 @@
 
 我们接着上边唠叨`flushed_to_disk_lsn`的例子看一下：
 
-- 假设`mtr_1`执行过程中修改了`页a`，那么在`mtr_1`执行结束时，就会将`页a`对应的控制块加入到`flush链表`的头部。并且将`mtr_1`开始时对应的`lsn`，也就是`8716`写入`页a`对应的控制块的`oldest_modification`属性中，把`mtr_1`结束时对应的`lsn`，也就是8404写入`页a`对应的控制块的`newest_modification`属性中。画个图表示一下（为了让图片美观一些，我们把`oldest_modification`缩写成了`o_m`，把`newest_modification`缩写成了`n_m`）：
+- 假设`mtr_1`执行过程中修改了`页a`，那么在`mtr_1`执行结束时，就会将`页a`对应的控制块加入到`flush链表`的头部。并且将`mtr_1`开始时对应的`lsn`，也就是`8716`写入`页a`对应的控制块的`oldest_modification`属性中，把`mtr_1`结束时对应的`lsn`，也就是8916写入`页a`对应的控制块的`newest_modification`属性中。画个图表示一下（为了让图片美观一些，我们把`oldest_modification`缩写成了`o_m`，把`newest_modification`缩写成了`n_m`）：
 
     ![image_1d4v63pct1v9o14l3812gnj11de44.png-31.8kB][14]
     
-- 接着假设`mtr_2`执行过程中又修改了`页b`和`页c`两个页面，那么在`mtr_2`执行结束时，就会将`页b`和`页c`对应的控制块都加入到`flush链表`的头部。并且将`mtr_2`开始时对应的`lsn`，也就是8404写入`页b`和`页c`对应的控制块的`oldest_modification`属性中，把`mtr_2`结束时对应的`lsn`，也就是9436写入`页b`和`页c`对应的控制块的`newest_modification`属性中。画个图表示一下：
+- 接着假设`mtr_2`执行过程中又修改了`页b`和`页c`两个页面，那么在`mtr_2`执行结束时，就会将`页b`和`页c`对应的控制块都加入到`flush链表`的头部。并且将`mtr_2`开始时对应的`lsn`，也就是8916写入`页b`和`页c`对应的控制块的`oldest_modification`属性中，把`mtr_2`结束时对应的`lsn`，也就是9948写入`页b`和`页c`对应的控制块的`newest_modification`属性中。画个图表示一下：
 
     ![image_1d4v64vte14tq1oc911s1v8gnn51.png-59.4kB][15]
 
     从图中可以看出来，每次新插入到`flush链表`中的节点都是被放在了头部，也就是说`flush链表`中前边的脏页修改的时间比较晚，后边的脏页修改时间比较早。
     
-- 接着假设`mtr_3`执行过程中修改了`页b`和`页d`，不过`页b`之前已经被修改过了，所以它对应的控制块已经被插入到了`flush`链表，所以在`mtr_2`执行结束时，只需要将`页d`对应的控制块都加入到`flush链表`的头部即可。所以需要将`mtr_3`开始时对应的`lsn`，也就是9436写入`页c`对应的控制块的`oldest_modification`属性中，把`mtr_3`结束时对应的`lsn`，也就是10000写入`页c`对应的控制块的`newest_modification`属性中。另外，由于`页b`在`mtr_3`执行过程中又发生了一次修改，所以需要更新`页b`对应的控制块中`newest_modification`的值为10000。画个图表示一下：
+- 接着假设`mtr_3`执行过程中修改了`页b`和`页d`，不过`页b`之前已经被修改过了，所以它对应的控制块已经被插入到了`flush`链表，所以在`mtr_3`执行结束时，只需要将`页d`对应的控制块都加入到`flush链表`的头部即可。所以需要将`mtr_3`开始时对应的`lsn`，也就是9948写入`页d`对应的控制块的`oldest_modification`属性中，把`mtr_3`结束时对应的`lsn`，也就是10000写入`页d`对应的控制块的`newest_modification`属性中。另外，由于`页b`在`mtr_3`执行过程中又发生了一次修改，所以需要更新`页b`对应的控制块中`newest_modification`的值为10000。画个图表示一下：
 
     ![image_1d4v68bhl1jb9r8m6vn1b157cn5e.png-110.8kB][16]
 
@@ -221,13 +220,13 @@
 
 这样`mtr_1`生成的`redo`日志就没有用了，它们占用的磁盘空间就可以被覆盖掉了。设计`InnoDB`的大叔提出了一个全局变量`checkpoint_lsn`来代表当前系统中可以被覆盖的`redo`日志总量是多少，这个变量初始值也是`8704`。
 
-比方说现在`页a`被刷新到了磁盘，`mtr_1`生成的`redo`日志就可以被覆盖了，所以我们需要进行一个增加`checkpoint_lsn`的操作，我们把这个过程称之为做一次`checkpoint`。做一次`checkpoint`其实可以分为两个步骤：
+比方说现在`页a`被刷新到了磁盘，`mtr_1`生成的`redo`日志就可以被覆盖了，所以我们可以进行一个增加`checkpoint_lsn`的操作，我们把这个过程称之为做一次`checkpoint`。做一次`checkpoint`其实可以分为两个步骤：
 
 - 步骤一：计算一下当前系统中可以被覆盖的`redo`日志对应的`lsn`值最大是多少。
 
     `redo`日志可以被覆盖，意味着它对应的脏页被刷到了磁盘，只要我们计算出当前系统中被最早修改的脏页对应的`oldest_modification`值，那<span style="color:red">凡是在系统lsn值小于该节点的oldest_modification值时产生的redo日志都是可以被覆盖掉的</span>，我们就把该脏页的`oldest_modification`赋值给`checkpoint_lsn`。
 
-    比方说当前系统中`页a`已经被刷新到磁盘，那么`flush链表`的尾节点就是`页c`，该节点就是当前系统中最早修改的脏页了，它的`oldest_modification`值为8404，我们就把8404赋值给`checkpoint_lsn`（也就是说在redo日志对应的lsn值小于8404时就可以被覆盖掉）。
+    比方说当前系统中`页a`已经被刷新到磁盘，那么`flush链表`的尾节点就是`页c`，该节点就是当前系统中最早修改的脏页了，它的`oldest_modification`值为8916，我们就把8916赋值给`checkpoint_lsn`（也就是说在redo日志对应的lsn值小于8916时就可以被覆盖掉）。
 
 - 步骤二：将`checkpoint_lsn`和对应的`redo`日志文件组偏移量以及此次`checkpint`的编号写到日志文件的管理信息（就是`checkpoint1`或者`checkpoint2`）中。
 
@@ -237,8 +236,7 @@
 
 记录完`checkpoint`的信息之后，`redo`日志文件组中各个`lsn`值的关系就像这样：
 
-![image_1d4v9cgu21mmcafb1hsp1qtj1di0p.png-79.5kB][19]
-
+![image_1d678eiie125j1flp1tc617jp1dvo9.png-68.1kB][19]
 
 ### 批量从flush链表中刷出脏页
 我们在介绍`Buffer Pool`的时候说过，一般情况下都是后台的线程在对`LRU链表`和`flush链表`进行刷脏操作，这主要因为刷脏操作比较慢，不想影响用户线程处理请求。但是如果当前系统修改页面的操作十分频繁，这样就导致写日志操作十分频繁，系统`lsn`值增长过快。如果后台的刷脏操作不能将脏页刷出，那么系统无法及时做`checkpoint`，可能就需要用户线程同步的从`flush链表`中把那些最早修改的脏页（`oldest_modification`最小的脏页）刷新到磁盘，这样这些脏页对应的`redo`日志就没用了，然后就可以去做`checkpoint`了。
@@ -278,9 +276,9 @@ Last checkpoint at  124052494
 
     这样很明显会加快请求处理速度，但是如果事务提交后服务器挂了，后台线程没有及时将`redo`日志刷新到磁盘，那么该事务对页面的修改会丢失。
 
-- `1`：当该系统变量值为0时，表示在事务提交时需要将`redo`日志同步到磁盘，可以保证事务的`持久性`。`1`也是`innodb_flush_log_at_trx_commit`的默认值。
+- `1`：当该系统变量值为1时，表示在事务提交时需要将`redo`日志同步到磁盘，可以保证事务的`持久性`。`1`也是`innodb_flush_log_at_trx_commit`的默认值。
 
-- `2`：当该系统变量值为0时，表示在事务提交时需要将`redo`日志写到操作系统的缓冲区中，但并不需要保证将日志真正的刷新到磁盘。
+- `2`：当该系统变量值为2时，表示在事务提交时需要将`redo`日志写到操作系统的缓冲区中，但并不需要保证将日志真正的刷新到磁盘。
 
     这种情况下如果数据库挂了，操作系统没挂的话，事务的`持久性`还是可以保证的，但是操作系统也挂了的话，那就不能保证`持久性`了。
 
@@ -319,7 +317,7 @@ Last checkpoint at  124052494
 
     我们前边说过，`checkpoint_lsn`之前的`redo`日志对应的脏页确定都已经刷到磁盘了，但是`checkpoint_lsn`之后的`redo`日志我们不能确定是否已经刷到磁盘，主要是因为在最近做的一次`checkpoint`后，可能后台线程又不断的从`LRU链表`和`flush链表`中将一些脏页刷出`Buffer Pool`。这些在`checkpoint_lsn`之后的`redo`日志，如果它们对应的脏页在奔溃发生时已经刷新到磁盘，那在恢复时也就没有必要根据`redo`日志的内容修改该页面了。
     
-    那在恢复时怎么知道某个`redo`日志对应的脏页是否在奔溃发生时已经刷新到磁盘了呢？这还得从页面的结构说起，我们前边说过每个页面都有一个称之为`File Header`的部分，在`File Header`里有一个称之为`FIL_PAGE_LSN`的属性，该属性记载了最近一次修改页面时对应的`lsn`值（其实就是页面控制块中的`newest_modification`值）。如果在做了某次`checkpoint`之后有脏页被刷新到磁盘中，那么该页对应的`FIL_PAGE_LSN`代表的`lsn`值肯定大于`checkpoint_lsn`的值，凡是符合这种情况的页面就不需要做恢复操作了，所以更进一步提升了奔溃恢复的速度。
+    那在恢复时怎么知道某个`redo`日志对应的脏页是否在奔溃发生时已经刷新到磁盘了呢？这还得从页面的结构说起，我们前边说过每个页面都有一个称之为`File Header`的部分，在`File Header`里有一个称之为`FIL_PAGE_LSN`的属性，该属性记载了最近一次修改页面时对应的`lsn`值（其实就是页面控制块中的`newest_modification`值）。如果在做了某次`checkpoint`之后有脏页被刷新到磁盘中，那么该页对应的`FIL_PAGE_LSN`代表的`lsn`值肯定大于`checkpoint_lsn`的值，凡是符合这种情况的页面就不需要重复执行lsn值小于`FIL_PAGE_LSN`的redo日志了，所以更进一步提升了奔溃恢复的速度。
 
 ## 遗漏的问题：LOG_BLOCK_HDR_NO是如何计算的
 我们前边说过，对于实际存储`redo`日志的普通的`log block`来说，在`log block header`处有一个称之为`LOG_BLOCK_HDR_NO`的属性（忘记了的话回头再看看哈），我们说这个属性代表一个唯一的标号。这个属性是初次使用该block时分配的，跟当时的系统`lsn`值有关。使用下边的公式计算该block的`LOG_BLOCK_HDR_NO`值：
@@ -335,26 +333,26 @@ Last checkpoint at  124052494
 另外，`LOG_BLOCK_HDR_NO`值的第一个比特位比较特殊，称之为`flush bit`，如果该值为1，代表着本block是在某次将`log buffer`中的block刷新到磁盘的操作中的第一个被刷入的block。
 
 
-  [1]: https://user-gold-cdn.xitu.io/2019/2/27/1692e62d5c67ac00?w=927&h=328&f=png&s=50859
-  [2]: https://user-gold-cdn.xitu.io/2019/2/28/16931df9929c0145?w=965&h=517&f=png&s=66461
-  [3]: https://user-gold-cdn.xitu.io/2019/2/27/1692e62d5ce89bc7?w=1012&h=311&f=png&s=52334
-  [4]: https://user-gold-cdn.xitu.io/2019/2/27/1692f2a88a081eb3?w=690&h=534&f=png&s=67070
-  [5]: https://user-gold-cdn.xitu.io/2019/2/28/16931df99a4cb2c8?w=564&h=487&f=png&s=61493
-  [6]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0706b589c?w=844&h=298&f=png&s=52083
-  [7]: https://user-gold-cdn.xitu.io/2019/3/3/169419c071a7c8b0?w=881&h=318&f=png&s=55320
-  [8]: https://user-gold-cdn.xitu.io/2019/3/3/169419c071e6cfea?w=957&h=523&f=png&s=101664
-  [9]: https://user-gold-cdn.xitu.io/2019/2/28/16934602a3b4b1be?w=821&h=410&f=png&s=86278
-  [10]: https://user-gold-cdn.xitu.io/2019/3/3/169419c07932ba5d?w=1062&h=540&f=png&s=90575
-  [11]: https://user-gold-cdn.xitu.io/2019/3/3/169419c079c97169?w=1047&h=553&f=png&s=102599
-  [12]: https://user-gold-cdn.xitu.io/2019/3/3/169419c07a0fd13d?w=1043&h=304&f=png&s=50514
-  [13]: https://user-gold-cdn.xitu.io/2019/3/2/1693d8fc3c18e991?w=1010&h=591&f=png&s=232466
-  [14]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0b9e35899?w=452&h=302&f=png&s=32582
-  [15]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0ba64a14c?w=918&h=322&f=png&s=60786
-  [16]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0bace2f5a?w=1127&h=484&f=png&s=113430
-  [17]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0bb00756d?w=793&h=638&f=png&s=114802
-  [18]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0bb65d251?w=632&h=627&f=png&s=101718
-  [19]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0bfca49d0?w=1086&h=570&f=png&s=81404
-  [20]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0e6c648f8?w=851&h=357&f=png&s=71131
-  [21]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0e76cca4f?w=830&h=288&f=png&s=61383
-  [22]: https://user-gold-cdn.xitu.io/2019/3/3/169419c0e8656fbb?w=1112&h=634&f=png&s=160128
-  [23]: https://user-gold-cdn.xitu.io/2019/3/1/16938e096d57684c?w=950&h=295&f=png&s=37758
+  [1]: https://user-gold-cdn.xitu.io/2019/3/26/169b899033f3b35d?w=927&h=328&f=png&s=50859
+  [2]: https://user-gold-cdn.xitu.io/2019/3/26/169b899033d57b7a?w=965&h=517&f=png&s=66461
+  [3]: https://user-gold-cdn.xitu.io/2019/3/26/169b899033e1cb89?w=1012&h=311&f=png&s=52334
+  [4]: https://user-gold-cdn.xitu.io/2019/3/26/169b899065200011?w=690&h=534&f=png&s=67070
+  [5]: https://user-gold-cdn.xitu.io/2019/3/26/169b899037defb21?w=564&h=487&f=png&s=61493
+  [6]: https://user-gold-cdn.xitu.io/2019/3/26/169b899065393c60?w=844&h=298&f=png&s=52083
+  [7]: https://user-gold-cdn.xitu.io/2019/3/26/169b899036dc68a0?w=881&h=318&f=png&s=55320
+  [8]: https://user-gold-cdn.xitu.io/2019/3/26/169b899037f19b86?w=957&h=523&f=png&s=101664
+  [9]: https://user-gold-cdn.xitu.io/2019/3/26/169b899065cd1697?w=821&h=410&f=png&s=86278
+  [10]: https://user-gold-cdn.xitu.io/2019/3/26/169b899065f16c34?w=1062&h=540&f=png&s=90575
+  [11]: https://user-gold-cdn.xitu.io/2019/3/26/169b899065ece690?w=1047&h=553&f=png&s=102599
+  [12]: https://user-gold-cdn.xitu.io/2019/3/26/169b8990864b2982?w=1043&h=304&f=png&s=50514
+  [13]: https://user-gold-cdn.xitu.io/2019/3/26/169b899094bcc632?w=1010&h=591&f=png&s=232466
+  [14]: https://user-gold-cdn.xitu.io/2019/3/26/169b899088d4f875?w=452&h=302&f=png&s=32582
+  [15]: https://user-gold-cdn.xitu.io/2019/3/26/169b899094ab6caf?w=918&h=322&f=png&s=60786
+  [16]: https://user-gold-cdn.xitu.io/2019/3/26/169b89909693bfe9?w=1127&h=484&f=png&s=113430
+  [17]: https://user-gold-cdn.xitu.io/2019/3/26/169b8990a1ec0f87?w=793&h=638&f=png&s=114802
+  [18]: https://user-gold-cdn.xitu.io/2019/3/26/169b8990ad89ad77?w=632&h=627&f=png&s=101718
+  [19]: https://user-gold-cdn.xitu.io/2019/3/26/169b8990aeb41002?w=956&h=519&f=png&s=69737
+  [20]: https://user-gold-cdn.xitu.io/2019/3/26/169b8990b6d085cd?w=851&h=357&f=png&s=71131
+  [21]: https://user-gold-cdn.xitu.io/2019/3/26/169b8990b9780dc2?w=830&h=288&f=png&s=61383
+  [22]: https://user-gold-cdn.xitu.io/2019/3/26/169b8990d0161bfc?w=1112&h=634&f=png&s=160128
+  [23]: https://user-gold-cdn.xitu.io/2019/3/26/169b8990bc261ef2?w=950&h=295&f=png&s=37758

@@ -488,7 +488,7 @@ mysql>
 
     - 有一些系统变量只具有`GLOBAL`作用范围，比方说`max_connections`，表示服务器程序支持同时最多有多少个客户端程序进行连接。
     
-    - 有一些系统变量只具有`SESSION`作用范围，比如`insert_id`，表示插入值时使用的`AUTO_INCREMENT`修饰的列的值。
+    - 有一些系统变量只具有`SESSION`作用范围，比如`insert_id`，表示在对某个包含`AUTO_INCREMENT`列的表进行插入时，该列初始的值。
 
     - 有一些系统变量的值既具有`GLOBAL`作用范围，也具有`SESSION`作用范围，比如我们前边用到的`default_storage_engine`，而且其实大部分的系统变量都是这样的，
     

@@ -1,6 +1,6 @@
 # 基于规则的优化
 
-标签： MySQL 是怎样运行的
+标签： MySQL是怎样运行的
 
 ---
 大家别忘了`MySQL`本质上是一个软件，设计`MySQL`的大叔并不能要求使用这个软件的人个个都是数据库高高手，就像我写这本书的时候并不能要求各位在学之前就会了里边儿的知识。
@@ -292,7 +292,7 @@ mysql> SELECT * FROM t1 INNER JOIN t2 ON t1.m1 = t2.m2 WHERE t2.m2 = 2;
     ```
     SELECT * FROM t1 WHERE (m1, n1) = (SELECT m2, n2 FROM t2 LIMIT 1);
     ```
-    其中的`(SELECT m2, n2 FROM t2 LIMIT 1)`就是一个行子查询，整条语句的含义就是要从`t1`表中找一些记录，这些记录的`m1`和`m2`列分别等于子查询结果中的`m2`和`n2`列。
+    其中的`(SELECT m2, n2 FROM t2 LIMIT 1)`就是一个行子查询，整条语句的含义就是要从`t1`表中找一些记录，这些记录的`m1`和`n2`列分别等于子查询结果中的`m2`和`n2`列。
     
 - 列子查询
 
@@ -320,7 +320,7 @@ mysql> SELECT * FROM t1 INNER JOIN t2 ON t1.m1 = t2.m2 WHERE t2.m2 = 2;
     
 - 相关子查询
     
-    如果子查询的执行需要依赖于外层查询的值，我们就可以把这个子查询称之为`不相关子查询`。比如：
+    如果子查询的执行需要依赖于外层查询的值，我们就可以把这个子查询称之为`相关子查询`。比如：
 
     ```
     SELECT * FROM t1 WHERE m1 IN (SELECT m2 FROM t2 WHERE n1 = n2);
@@ -690,7 +690,6 @@ SELECT s1.* FROM s1 INNER JOIN materialized_table ON key1 = m_val;
     
     - 物化表中的记录数量 × 通过`key1 = xxx`对`s1`表进行单表访问的成本（非常庆幸`key1`列上建立了索引，所以这个步骤是非常快的）。
 
-
 `MySQL`查询优化器会通过运算来选择上述成本更低的方案来执行查询。
 
 ##### 将子查询转换为semi-join
@@ -969,7 +968,7 @@ SELECT ... FROM outer_tables
 
 ##### 小结一下
 
-- 如果`IN`子查询符合转换为`semi-join`的条件，查询优化器会优先把该子查询为`semi-join`，然后再考虑下边5种执行半连接的策略中哪个成本最低：
+- 如果`IN`子查询符合转换为`semi-join`的条件，查询优化器会优先把该子查询转换为`semi-join`，然后再考虑下边5种执行半连接的策略中哪个成本最低：
 
     - Table pullout
     - DuplicateWeedout
@@ -1011,7 +1010,7 @@ SELECT * FROM s1
 SELECT * FROM s1 
     WHERE TRUE;
 ```
-对于不相关的`[NOT] EXISTS`子查询来说，比如这个查询：
+对于相关的`[NOT] EXISTS`子查询来说，比如这个查询：
 ```
 SELECT * FROM s1 
     WHERE EXISTS (SELECT 1 FROM s2 WHERE s1.common_field = s2.common_field);
@@ -1046,7 +1045,7 @@ SELECT * FROM  (
         ON derived_s1.key1 = s2.key1
         WHERE s2.key2 = 1;
     ```
-    如果采用物化派生表的方式来执行这个查询的话，那么执行时首先会到`s1`表中找出满足`s1.key2 = 1`的记录，如果压根儿找不到，说明参与连接的`s1`表记录就是空的，所以整个查询的结果集就是空的，所以也就没有必要去物化查询中的派生表了。
+    如果采用物化派生表的方式来执行这个查询的话，那么执行时首先会到`s2`表中找出满足`s2.key2 = 1`的记录，如果压根儿找不到，说明参与连接的`s2`表记录就是空的，所以整个查询的结果集就是空的，所以也就没有必要去物化查询中的派生表了。
     
 - 将派生表和外层的表合并，也就是将查询重写为没有派生表的形式
     
@@ -1071,7 +1070,7 @@ SELECT * FROM  (
     ```
     SELECT * FROM s1 INNER JOIN s2 
         ON s1.key1 = s2.key1
-        WHERE s2.key2 = 1;
+        WHERE s1.key1 = 'a' AND s2.key2 = 1;
     ```
     这样通过将外层查询和派生表合并的方式成功的消除了派生表，也就意味着我们没必要再付出创建和访问临时表的成本了。可是并不是所有带有派生表的查询都能被成功的和外层查询合并，当派生表中有这些语句就不可以和外层查询合并：
     
@@ -1094,6 +1093,6 @@ SELECT * FROM  (
 所以`MySQL`在执行带有派生表的时候，优先尝试把派生表和外层查询合并掉，如果不行的话，再把派生表物化掉执行查询。
 
 
-  [1]: https://user-gold-cdn.xitu.io/2018/12/26/167e9e704abd19e4?w=741&h=566&f=png&s=86914
-  [2]: https://user-gold-cdn.xitu.io/2018/12/26/167e9e704f8befd2?w=730&h=509&f=png&s=68994
-  [3]: https://user-gold-cdn.xitu.io/2018/12/26/167e9e704e05a551?w=959&h=440&f=png&s=112907
+  [1]: https://user-gold-cdn.xitu.io/2019/5/6/16a8dda5369e68c5?w=741&h=566&f=png&s=86914
+  [2]: https://user-gold-cdn.xitu.io/2019/5/6/16a8dda5394d3903?w=730&h=509&f=png&s=68994
+  [3]: https://user-gold-cdn.xitu.io/2019/5/6/16a8dda53aa776bf?w=959&h=440&f=png&s=112907

@@ -1,4 +1,4 @@
-# otpimizer trace 表的神奇功效
+# optimizer trace 表的神奇功效
 
 标签： MySQL 是怎样运行的
 

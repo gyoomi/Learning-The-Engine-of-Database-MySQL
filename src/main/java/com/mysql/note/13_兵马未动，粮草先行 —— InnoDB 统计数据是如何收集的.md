@@ -212,7 +212,7 @@ mysql> SELECT * FROM mysql.innodb_index_stats WHERE table_name = 'single_table';
         ```!
         小贴士：
         
-        这里需要注意的是，对于普通的二级索引，并不能保证它的索引列值是唯一的，比如对于idx_key1来说，key1列就可能有很多值重复的记录。此时只有在索引列上加上主键值才可以区分两条索引列值都一样的二级索引记录。对于主键和二级索引则没有这个问题，它们本身就可以保证索引列值的不重复，所以也不需要再统计一遍在索引列后加上主键值的不重复值有多少。比如上边的idx_key1有n_diff_pfx01、n_diff_pfx02两个统计项，而idx_key2却只有n_diff_pfx01一个统计项。
+        这里需要注意的是，对于普通的二级索引，并不能保证它的索引列值是唯一的，比如对于idx_key1来说，key1列就可能有很多值重复的记录。此时只有在索引列上加上主键值才可以区分两条索引列值都一样的二级索引记录。对于主键和唯一二级索引则没有这个问题，它们本身就可以保证索引列值的不重复，所以也不需要再统计一遍在索引列后加上主键值的不重复值有多少。比如上边的idx_key1有n_diff_pfx01、n_diff_pfx02两个统计项，而idx_key2却只有n_diff_pfx01一个统计项。
         ```
         
 - 在计算某些索引列中包含多少不重复值时，需要对一些叶子节点页面进行采样，`size`列就表明了采样的页面数量是多少。
@@ -257,7 +257,7 @@ mysql> SELECT * FROM mysql.innodb_index_stats WHERE table_name = 'single_table';
     需要注意的是，<span style="color:red">ANALYZE TABLE语句会立即重新计算统计数据，也就是这个过程是同步的</span>，在表中索引多或者采样页面特别多时这个过程可能会特别慢，请不要没事儿就运行一下`ANALYZE TABLE`语句，最好在业务不是很繁忙的时候再运行。
     
 ### 手动更新`innodb_table_stats`和`innodb_index_stats`表
-其实`innodb_table_stats`和`innodb_index_stats`表就相当于一个普通的表一样，我们能对它们做增删改查操作。这也就意味着我们可以<span style="color:red">手动更新某个表或者索引的统计数据</span>。比如说我们想把`single_table`表关于行数的统计书记更改一下可以这么做：
+其实`innodb_table_stats`和`innodb_index_stats`表就相当于一个普通的表一样，我们能对它们做增删改查操作。这也就意味着我们可以<span style="color:red">手动更新某个表或者索引的统计数据</span>。比如说我们想把`single_table`表关于行数的统计数据更改一下可以这么做：
 
 - 步骤一：更新`innodb_table_stats`表。
     
@@ -366,7 +366,7 @@ mysql> SELECT * FROM mysql.innodb_index_stats WHERE table_name = 'single_table';
 
     如果某个索引列中`NULL`值特别多的话，这种统计方式会让优化器认为某个列中平均一个值重复次数特别多，所以倾向于不使用索引进行访问。
 
-- `nulls_unequal`：认为所有`NULL`值都是不想等的。
+- `nulls_unequal`：认为所有`NULL`值都是不相等的。
 
     如果某个索引列中`NULL`值特别多的话，这种统计方式会让优化器认为某个列中平均一个值重复次数特别少，所以倾向于使用索引进行访问。
 

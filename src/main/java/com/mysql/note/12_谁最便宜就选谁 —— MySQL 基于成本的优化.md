@@ -1,6 +1,6 @@
 # 基于成本的优化
 
-标签： MySQL 是怎样运行的
+标签： MySQL是怎样运行的
 
 ---
 
@@ -91,7 +91,7 @@ SELECT * FROM single_table WHERE
 
 - 该表中的记录数
 
-这两个信息从哪来呢？设计`MySQL`的大叔为每个表维护了一系列的`统计信息`，关于这些统计信息是如何收集起来的我们放在本章后边详细唠叨，现在看看怎么查看这些统计信息哈。设计`MySQL`的大叔给我们提供了`SHOW TABLE STATUS`语句来查看表的统计信息，如果要看指定的某个表的统计信息，在该语句后加对应的`LIKE`语句就好了，比方说我们要查看`order_by_demo`这个表的统计信息可以这么写：
+这两个信息从哪来呢？设计`MySQL`的大叔为每个表维护了一系列的`统计信息`，关于这些统计信息是如何收集起来的我们放在本章后边详细唠叨，现在看看怎么查看这些统计信息哈。设计`MySQL`的大叔给我们提供了`SHOW TABLE STATUS`语句来查看表的统计信息，如果要看指定的某个表的统计信息，在该语句后加对应的`LIKE`语句就好了，比方说我们要查看`single_table`这个表的统计信息可以这么写：
 
 ```
 mysql> USE xiaohaizi;
@@ -153,10 +153,10 @@ Max_data_length: 0
 - `CPU`成本：
 
     ```
-    9639 x 0.2 + 1.0 = 1939.6
+    9693 x 0.2 + 1.0 = 1939.6
     ```
     
-    `9639`指的是统计数据中表的记录数，对于`InnoDB`存储引擎来说是一个估计值，`0.2`指的是访问一条记录所需的成本常数，后边的`1.0`是一个微调值，我们不用在意。
+    `9693`指的是统计数据中表的记录数，对于`InnoDB`存储引擎来说是一个估计值，`0.2`指的是访问一条记录所需的成本常数，后边的`1.0`是一个微调值，我们不用在意。
     
     
 - 总成本：
@@ -179,7 +179,7 @@ Max_data_length: 0
 ##### 使用idx_key2执行查询的成本分析
 `idx_key2`对应的搜索条件是：`key2 > 10 AND key2 < 1000`，也就是说对应的范围区间就是：`(10, 1000)`，使用`idx_key2`搜索的示意图就是这样子：
 
-![image_1cudvercs1km11nu74fbckb1fl8m.png-117.5kB][1]
+![image_1d6cb8nolj1714dimrf1iu64l99.png-124.3kB][1]
 
 对于使用`二级索引 + 回表`方式的查询，设计`MySQL`的大叔计算这种查询的成本依赖两个方面的数据：
 
@@ -398,8 +398,8 @@ mysql> SHOW INDEX FROM single_table;
 +--------------+------------+--------------+--------------+-------------+-----------+-------------+----------+--------+------+------------+---------+---------------+
 | single_table |          0 | PRIMARY      |            1 | id          | A         |       9693  |     NULL | NULL   |      | BTREE      |         |               |
 | single_table |          0 | idx_key2     |            1 | key2        | A         |       9693  |     NULL | NULL   | YES  | BTREE      |         |               |
-| single_table |          1 | idx_key1     |            1 | key1        | A         |        968  |     NULL | NULL   | YES  | BTREE      |         |               |
-| single_table |          1 | idx_key3     |            1 | key3        | A         |        799  |     NULL | NULL   | YES  | BTREE      |         |               |
+| single_table |          1 | idx_key1     |            1 | key1        | A         |        968 |     NULL | NULL   | YES  | BTREE      |         |               |
+| single_table |          1 | idx_key3     |            1 | key3        | A         |        799 |     NULL | NULL   | YES  | BTREE      |         |               |
 | single_table |          1 | idx_key_part |            1 | key_part1   | A         |        9673 |     NULL | NULL   | YES  | BTREE      |         |               |
 | single_table |          1 | idx_key_part |            2 | key_part2   | A         |        9999 |     NULL | NULL   | YES  | BTREE      |         |               |
 | single_table |          1 | idx_key_part |            3 | key_part3   | A         |       10000 |     NULL | NULL   | YES  | BTREE      |         |               |
@@ -626,7 +626,7 @@ SELECT * FROM single_table AS s1 INNER JOIN single_table2 AS s2
     
     所以此时使用`single_table`作为驱动表时的总成本就是：
     ```
-    使用idx_key2访问s2的成本 + s1的扇出 × 使用idx_key1访问s1的成本
+    使用idx_key2访问s2的成本 + s2的扇出 × 使用idx_key1访问s1的成本
     ```
 
 最后优化器会比较这两种方式的最优访问成本，选取那个成本更低的连接顺序去真正的执行查询。从上边的计算过程也可以看出来，连接查询成本占大头的其实是`驱动表扇出数 x 单次访问被驱动表的成本`，所以我们的优化重点其实是下边这两个部分：
@@ -813,6 +813,7 @@ mysql> SELECT * FROM mysql.engine_cost;
     FLUSH OPTIMIZER_COSTS;
     ```
 
-  [1]: https://user-gold-cdn.xitu.io/2018/12/13/167a79434866cf8f?w=810&h=639&f=png&s=120298
-  [2]: https://user-gold-cdn.xitu.io/2018/12/13/167a79434ad70118?w=994&h=555&f=png&s=87303
-  [3]: https://user-gold-cdn.xitu.io/2018/12/13/167a79434b362e5e?w=818&h=637&f=png&s=127109
+
+  [1]: https://user-gold-cdn.xitu.io/2019/3/20/16998b505d671d4e?w=846&h=643&f=png&s=127295
+  [2]: https://user-gold-cdn.xitu.io/2019/3/20/16998b505d7a278a?w=994&h=555&f=png&s=87303
+  [3]: https://user-gold-cdn.xitu.io/2019/3/20/16998b505eab86e6?w=818&h=637&f=png&s=127109
